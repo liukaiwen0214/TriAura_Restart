@@ -1,6 +1,7 @@
 package com.triaura.backend.common.exception;
 
 import com.triaura.backend.common.api.ApiResponse;
+import com.triaura.backend.common.api.ErrorCode;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -41,7 +42,7 @@ public class GlobalExceptionHandler {
                 .map(this::formatFieldError)
                 .collect(Collectors.joining("; "));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.fail(10001, emptyToDefault(msg, "参数校验失败")));
+                .body(ApiResponse.fail(ErrorCode.VALIDATION_ERROR, emptyToDefault(msg)));
     }
 
     /**
@@ -54,7 +55,7 @@ public class GlobalExceptionHandler {
                 .map(this::formatFieldError)
                 .collect(Collectors.joining("; "));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.fail(10001, emptyToDefault(msg, "参数校验失败")));
+                .body(ApiResponse.fail(ErrorCode.VALIDATION_ERROR, emptyToDefault(msg)));
     }
 
     /**
@@ -67,7 +68,7 @@ public class GlobalExceptionHandler {
                 .map(this::formatConstraintViolation)
                 .collect(Collectors.joining("; "));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.fail(10001, emptyToDefault(msg, "参数校验失败")));
+                .body(ApiResponse.fail(ErrorCode.VALIDATION_ERROR, emptyToDefault(msg)));
     }
 
     /**
@@ -77,7 +78,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleMissingParam(MissingServletRequestParameterException ex) {
         String msg = "缺少必填参数：" + ex.getParameterName();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.fail(10002, msg));
+                .body(ApiResponse.fail(ErrorCode.VALIDATION_ERROR, msg));
     }
 
     /**
@@ -87,7 +88,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException ex) {
         String msg = "请求体解析失败，请检查 JSON 格式/字段类型";
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.fail(10003, msg));
+                .body(ApiResponse.fail(ErrorCode.BODY_NOT_READABLE, msg));
     }
 
     /**
@@ -98,7 +99,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleAny(Exception ex) {
         ex.printStackTrace(); // 开发期打印异常，方便定位（生产环境会换成日志）
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.fail(50000, "服务器异常"));
+                .body(ApiResponse.fail(ErrorCode.INTERNAL_ERROR, "服务器异常"));
     }
     /**
      * 新版 Spring 的方法参数校验异常（Spring 版本不同，抛的异常类可能不同）
@@ -110,9 +111,17 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleMethodValidation(Exception ex) {
         // 这里先给一个通用提示（想做更精细的字段提示，后面我们再增强）
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.fail(10001, "参数校验失败"));
+                .body(ApiResponse.fail(ErrorCode.VALIDATION_ERROR, "参数校验失败"));
     }
-
+    /**
+     * 业务参数错误（我们在 service 里抛 IllegalArgumentException）
+     * 返回：HTTP 400 + 业务 code=10001
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArg(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.fail(ErrorCode.VALIDATION_ERROR, ex.getMessage()));
+    }
     private String formatFieldError(FieldError fe) {
         // 例如：title: 不能为空
         String field = Objects.toString(fe.getField(), "");
@@ -127,8 +136,8 @@ public class GlobalExceptionHandler {
         return path.isBlank() ? message : (path + ": " + message);
     }
 
-    private String emptyToDefault(String s, String def) {
-        if (s == null || s.trim().isEmpty()) return def;
+    private String emptyToDefault(String s) {
+        if (s == null || s.trim().isEmpty()) return "参数校验失败";
         return s;
     }
 }

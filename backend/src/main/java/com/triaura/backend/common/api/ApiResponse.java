@@ -54,7 +54,20 @@ public class ApiResponse<T> {
     public static <T> ApiResponse<T> fail(int code, String message) {
         return new ApiResponse<>(code, message, null);
     }
+    /**
+     * 失败响应（使用统一错误码 + 默认提示）。
+     */
+    public static <T> ApiResponse<T> fail(ErrorCode errorCode) {
+        return new ApiResponse<>(errorCode.getCode(), errorCode.getDefaultMessage(), null);
+    }
 
+    /**
+     * 失败响应（使用统一错误码 + 自定义提示）。
+     * 适合：需要把具体字段错误告诉前端，例如 “title 不能为空”
+     */
+    public static <T> ApiResponse<T> fail(ErrorCode errorCode, String message) {
+        return new ApiResponse<>(errorCode.getCode(), message, null);
+    }
     public int getCode() {
         return code;
     }

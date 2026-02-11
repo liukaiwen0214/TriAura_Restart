@@ -2,12 +2,20 @@ server:
   port: 8080
 
 spring:
-  datasource:
-    url: jdbc:mysql://172.16.0.7:3306/triaura?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: 9xAeqVXg5_DxQg
-    driver-class-name: com.mysql.cj.jdbc.Driver
+  # 当前默认使用本地配置（可以用启动参数覆盖）
+  profiles:
+    active: local
 
 mybatis:
   configuration:
     map-underscore-to-camel-case: true
+
+# 你自己的业务配置也可以放这里（公共部分）
+app:
+  env: ${spring.profiles.active}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
