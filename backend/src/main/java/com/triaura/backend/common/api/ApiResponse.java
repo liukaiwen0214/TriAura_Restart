@@ -1,5 +1,8 @@
 package com.triaura.backend.common.api;
 
+import com.triaura.backend.common.error.ErrorCode;
+import lombok.Data;
+
 /**
  * 统一 API 响应包装类（后端所有接口建议都返回它）。
  * 目的：
@@ -10,6 +13,7 @@ package com.triaura.backend.common.api;
  * - code != 0：业务失败（message 为失败原因）
  * - data：业务数据（成功时通常有值，失败时一般为 null）
  */
+@Data
 public class ApiResponse<T> {
 
     /**
@@ -41,8 +45,8 @@ public class ApiResponse<T> {
      *
      * @param data 业务数据
      */
-    public static <T> ApiResponse<T> ok(T data) {
-        return new ApiResponse<>(0, "ok", data);
+    public static <T> ApiResponse<T> ok(T data, String message) {
+        return new ApiResponse<>(200, message, data);
     }
 
     /**
@@ -68,27 +72,5 @@ public class ApiResponse<T> {
     public static <T> ApiResponse<T> fail(ErrorCode errorCode, String message) {
         return new ApiResponse<>(errorCode.getCode(), message, null);
     }
-    public int getCode() {
-        return code;
-    }
 
-    public void setCode(int code) {
-        this.code = code;
-    }
-
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public T getData() {
-        return data;
-    }
-
-    public void setData(T data) {
-        this.data = data;
-    }
 }

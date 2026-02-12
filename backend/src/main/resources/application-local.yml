@@ -7,3 +7,9 @@ spring:
 
   flyway:
     enabled: true
+
+  app:
+    auth:
+      cookie-name: TA_SESSION
+      session-days: 14          # 会话有效期（天）
+      cookie-secure: false      # 本地开发 false；线上 HTTPS 改 true

@@ -1,7 +1,8 @@
 package com.triaura.backend.common.exception;
 
 import com.triaura.backend.common.api.ApiResponse;
-import com.triaura.backend.common.api.ErrorCode;
+import com.triaura.backend.common.error.BizException;
+import com.triaura.backend.common.error.ErrorCode;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -89,6 +90,24 @@ public class GlobalExceptionHandler {
         String msg = "请求体解析失败，请检查 JSON 格式/字段类型";
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.fail(ErrorCode.BODY_NOT_READABLE, msg));
+    }
+    @ExceptionHandler(BizException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBiz(BizException ex) {
+        ErrorCode code = ex.getErrorCode();
+
+        // 默认按 400 处理（业务错误）
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+
+        // 登录态相关：更符合语义的 HTTP 状态
+        if (code == ErrorCode.NOT_LOGIN) {
+            status = HttpStatus.UNAUTHORIZED; // 401
+        }
+        if (code == ErrorCode.INVALID_CREDENTIALS || code == ErrorCode.CODE_INVALID) {
+            status = HttpStatus.UNAUTHORIZED; // 401（账号/凭证不对）
+        }
+
+        return ResponseEntity.status(status)
+                .body(ApiResponse.fail(code, ex.getMessage()));
     }
 
     /**

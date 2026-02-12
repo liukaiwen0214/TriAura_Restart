@@ -4,7 +4,7 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@MapperScan("com.triaura.backend.module.**.mapper")
+@MapperScan("com.triaura.backend.modules")
 @SpringBootApplication
 public class BackendApplication {
 
