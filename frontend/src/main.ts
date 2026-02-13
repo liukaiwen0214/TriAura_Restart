@@ -14,9 +14,9 @@ import "primeicons/primeicons.css";
 
 const app = createApp(App);
 app.use(router);
+app.use(ToastService);
 app.component("Button", Button);
 app.component("Toast",Toast);
-app.use(ToastService);
 app.mount("#app");
 
 app.use(PrimeVue, {

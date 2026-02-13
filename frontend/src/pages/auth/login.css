@@ -1,0 +1,226 @@
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.field {
+  display: grid;
+  gap: 8px;
+}
+.label {
+  font-size: 12px;
+  color: #475569;
+}
+
+.input {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid #e6e8f0;
+  background: #fff;
+  color: #0f172a;
+  outline: none;
+  transition: 0.15s;
+}
+.input::placeholder {
+  color: #94a3b8;
+}
+.input:focus {
+  border-color: #0f172a;
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.08);
+}
+
+.modeTabs{
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 0;
+  margin-top: 10px;
+
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e6e8f0;
+}
+
+.modeTabs .tab{
+  position: relative;
+  background: transparent;
+  border: 0;
+  padding: 10px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.tab:hover{ color:#0f172a; }
+
+
+.modeTabs.tab.active{
+  color: #0f172a;
+}
+.modeTabs .tabInk{
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  width: 50%;
+  height: 3px;
+  border-radius: 999px;
+  background: #0f172a;
+
+  transform: translateX(0%);
+  transition: transform .22s cubic-bezier(.2,.8,.2,1);
+}
+.modeTabs .tabInk{
+  transform: translateX(0%);
+  transition: transform .22s cubic-bezier(.2,.8,.2,1);
+}
+.modeTabs.code .tabInk{
+  transform: translateX(100%);
+}
+.tab.active::after{
+  content:"";
+  position:absolute;
+  left: 0;
+  right: 0;
+  bottom: -11px;
+
+  /* 下划线更“高级”：短一点、圆一点、没那么粗 */
+  height: 3px;
+  border-radius: 999px;
+  background:#0f172a;
+  opacity: .9;
+}
+.tab::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:-11px;
+  height:3px;
+  border-radius:999px;
+  background:#0f172a;
+  opacity:0;
+  transform: scaleX(.6);
+  transition: opacity .18s ease, transform .18s ease;
+}
+.tab.active::after{
+  opacity:.9;
+  transform: scaleX(1);
+}
+
+.row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;  /* ✅ 左右两端对齐 */
+  gap: 12px;
+  width: 100%;
+}
+.chk {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #475569;
+}
+.chk input {
+  accent-color: #0f172a;
+}
+
+.link {
+  color: #0f172a;
+  text-decoration: none;
+  font-size: 12px;
+}
+.link:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  text-align: center;
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.pwdWrap {
+  position: relative;
+}
+.pwdInput {
+  padding-right: 44px;
+}
+
+.eyeInInput {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.25rem;
+  color: rgb(180, 180, 180);
+  cursor: pointer;
+  transition: color 0.2s ease;
+  user-select: none;
+}
+.eyeInInput:hover {
+  color: rgb(110, 110, 110);
+}
+
+.codeWrap {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+
+/* PrimeVue 登录按钮：黑色 */
+:deep(.loginBtn.p-button) {
+  width: 100%;
+  background: #000;
+  border-color: #000;
+}
+:deep(.loginBtn.p-button:hover) {
+  background: #333;
+  border-color: #333;
+}
+
+/* 切换登录方式动画：轻、快、不晃 */
+.mode-swap-enter-active,
+.mode-swap-leave-active{
+  transition: opacity .18s ease, transform .18s ease;
+  will-change: opacity, transform;
+}
+
+.mode-swap-enter-from{
+  opacity: 0;
+  transform: translateY(8px) scale(.985);
+}
+
+.mode-swap-leave-to{
+  opacity: 0;
+  transform: translateY(-6px) scale(.985);
+}
+
+.mode-swap-enter-to,
+.mode-swap-leave-from{
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+/* ✅ 只放大“发送验证码”这颗按钮（建议包一层 .codeWrap） */
+:deep(.codeWrap .p-button.p-component.p-button-secondary.p-button-outlined){
+  height: 40px;              /* 跟你 input 高度对齐 */
+  padding: 0 16px;           /* 横向更舒服 */
+  border-radius: 9px;       /* 跟 input 圆角统一一点 */
+}
+
+/* 文字稍微放大 + 不那么硬 */
+:deep(.codeWrap .p-button.p-component.p-button-secondary.p-button-outlined > span){
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .2px;
+  line-height: 1;
+}
+
+/* 禁用态别太“发虚” */
+:deep(.codeWrap .p-button.p-component.p-button-secondary.p-button-outlined:disabled){
+  opacity: .75;
+}

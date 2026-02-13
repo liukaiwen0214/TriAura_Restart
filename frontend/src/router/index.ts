@@ -1,49 +1,46 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../pages/Home.vue'
-import Login from '../pages/Login.vue'
-import Register from '../pages/Register.vue'
-import { useAuth } from '@/auth/useAuth'
+import { createRouter, createWebHistory } from "vue-router";
+import TriAura from "@/pages/TriAura.vue";
+import AuthSwitcher from "@/pages/auth/AuthSwitcher.vue";
+import { useAuth } from "@/auth/useAuth";
 
-/**
- * meta.requiresAuth = true 表示需要登录
- */
 export const router = createRouter({
-    history: createWebHistory(),
-    routes: [
-        { path: '/login', component: Login, meta: { requiresAuth: false } },
-        { path: '/register', component: Register, meta: { requiresAuth: false } },
-        
-        // 首页需要登录
-        { path: '/', component: Home, meta: { requiresAuth: true } },
-    ],
-})
+  history: createWebHistory(),
+  routes: [
+    // ✅ 统一入口
+    { path: "/auth", component: AuthSwitcher, meta: { requiresAuth: false, hideNav: true } },
+    // ✅ 兼容旧地址：/login /register 都导到 /auth
+    { path: "/login", redirect: { path: "/auth", query: { tab: "login" } } },
+    {
+      path: "/register",
+      redirect: { path: "/auth", query: { tab: "register" } },
+    },
 
-/**
- * 全局前置守卫：
- * - 访问需要登录的页面：先确保 me 已加载
- * - 未登录：跳转到 /login，并带上 redirect 参数
- */
+    // 首页需要登录
+    { path: "/", component: TriAura, meta: { requiresAuth: true } },
+
+    // 其它路径都导到 /auth
+    { path: "/:pathMatch(.*)*", redirect: "/auth" },
+  ],
+});
+
 router.beforeEach(async (to) => {
-    if (!to.meta.requiresAuth) return true
-    
-    const { state, fetchMe } = useAuth()
-    
-    // 已经加载并且有用户，直接放行
-    if (state.loaded && state.me) return true
-    
-    // 未加载就拉一次 /me
-    if (!state.loaded) {
-        try {
-            await fetchMe()
-            if (state.me) return true
-        } catch (e) {
-            // 忽略，下面统一跳登录
-        }
+  if (!to.meta.requiresAuth) return true;
+
+  const { state, fetchMe } = useAuth();
+
+  if (state.loaded && state.me) return true;
+
+  if (!state.loaded) {
+    try {
+      await fetchMe();
+      if (state.me) return true;
+    } catch (e) {
+      // ignore
     }
-    
-    // 未登录：跳转登录页
-    return {
-        path: '/login',
-        query: { redirect: to.fullPath },
-    }
-})
+  }
+
+  return {
+    path: "/auth",
+    query: { tab: "login", redirect: to.fullPath },
+  };
+});
