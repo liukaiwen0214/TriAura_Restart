@@ -1,0 +1,13 @@
+<component name="ArtifactManager">
+  <artifact type="exploded-war" name="TriAura_Restart:Web exploded">
+    <output-path>$PROJECT_DIR$/out/artifacts/TriAura_Restart_Web_exploded</output-path>
+    <root id="root">
+      <element id="javaee-facet-resources" facet="TriAura_Restart/web/Web" />
+      <element id="directory" name="WEB-INF">
+        <element id="directory" name="classes">
+          <element id="module-output" name="TriAura_Restart" />
+        </element>
+      </element>
+    </root>
+  </artifact>
+</component>

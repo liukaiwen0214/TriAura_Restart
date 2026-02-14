@@ -7,7 +7,6 @@
     "
   >
     <!-- ✅ Toast 必须渲染在页面里（不要只在 main.ts 注册组件名） -->
-    <Toast />
     <div class="switcherWrap">
       <Transition name="fade-slide" mode="out-in">
         <LoginForm

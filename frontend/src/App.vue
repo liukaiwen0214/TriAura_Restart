@@ -3,7 +3,7 @@ import { computed } from "vue";
 import { useRoute } from "vue-router";
 
 import NavBar from "@/components/NavBar.vue";
-import Toast from "primevue/toast";
+import { Toaster } from "@/components/ui/sonner";
 
 const route = useRoute();
 
@@ -14,5 +14,5 @@ const showNav = computed(() => !route.meta?.hideNav);
 <template>
   <NavBar v-if="showNav" />
   <router-view />
-  <Toast />
+  <Toaster richColors position="top-right" />
 </template>

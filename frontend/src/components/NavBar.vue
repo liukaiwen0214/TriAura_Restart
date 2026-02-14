@@ -10,7 +10,6 @@
             <span class="title">生活</span>
             <span class="sub">记录美好生活</span>
           </div>
-
           <!-- 内层：下拉 -->
           <div class="dropdown">
             <a
@@ -287,11 +286,145 @@
           </div>
         </Transition>
       </div>
-      <button class="iconBtn" title="任务">
-        <i class="pi pi-check-square"></i>
-      </button>
+      <!-- ✅ 任务：hover 小面板 + 回车快加 + 弹窗详细 -->
+      <div class="taskWrap" @mouseenter="openTask()" @mouseleave="closeTask()">
+        <button class="iconBtn" title="待办">
+          <i class="pi pi-check-square"></i>
+          <span
+            v-if="pendingCount > 0"
+            class="dot dotBlue"
+            aria-hidden="true"
+          ></span>
+        </button>
 
-      <div class="avatar" title="个人信息">K</div>
+        <Transition name="pop" appear>
+          <div class="taskPanel" v-if="taskOpen">
+            <div class="taskHead">
+              <div class="taskTitle">待办</div>
+              <div class="taskCount">{{ visibleTasks.length }} 条</div>
+            </div>
+
+            <!-- ✅ 快速新增：回车就加（简易） -->
+            <div class="taskQuick">
+              <input
+                v-model.trim="quickText"
+                class="taskQuickInput"
+                placeholder="回车添加一个待办…"
+                @keydown.enter.prevent="addQuick()"
+              />
+              <button
+                class="taskQuickPlus"
+                type="button"
+                @click="openTaskDialog()"
+              >
+                <i class="pi pi-plus"></i>
+              </button>
+            </div>
+
+            <div class="taskList">
+              <div
+                v-for="t in visibleTasks"
+                :key="t.id"
+                class="taskItem"
+                @click="openTaskItem(t)"
+              >
+                <label class="taskLeft">
+                  <input
+                    type="checkbox"
+                    class="taskChk"
+                    :checked="t.done"
+                    @click.stop
+                    @change="toggleDone(t.id)"
+                  />
+                </label>
+
+                <div class="taskMid">
+                  <!-- 标题行：点 + 标题（同一行） -->
+                  <div class="taskTopRow">
+                    <span
+                      class="prioDot"
+                      :data-p="t.priority || 'MEDIUM'"
+                    ></span>
+                    <div class="taskItemTitle" :class="{ done: t.done }">
+                      {{ t.title }}
+                    </div>
+                  </div>
+                  <div v-if="t.note" class="taskNote">{{ t.note }}</div>
+                </div>
+                <!-- ✅ 右侧独立一列：上 tag 下 time,且和中间两行对齐 -->
+                <div class="taskRight">
+                  <span v-if="t.tag" class="taskTag">{{ t.tag }}</span>
+                  <span v-if="t.time" class="taskTime">{{ t.time }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="taskFoot">
+              <button class="taskMore" type="button" @click="viewTaskMore">
+                查看更多
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
+
+      <!-- ✅ 个人信息：hover 面板 -->
+      <div
+        class="profileWrap"
+        @mouseenter="openProfile()"
+        @mouseleave="closeProfile()"
+      >
+        <div class="avatar" title="个人信息">{{ avatarText }}</div>
+
+        <Transition name="pop" appear>
+          <div class="profilePanel" v-if="profileOpen">
+            <!-- 顶部信息 -->
+            <div class="profileHead">
+              <div class="profileAvatar">{{ avatarText }}</div>
+
+              <div class="profileInfo">
+                <div class="profileTop">
+                  <div class="profileName" :title="displayName">
+                    {{ displayName }}
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    class="h-5 px-2 text-xs gap-1 bg-blue-500! text-white! hover:bg-blue-500! dark:bg-blue-600! dark:hover:bg-blue-600!"
+                  >
+                    <BadgeCheckIcon class="h-3.5 w-3.5" />
+                    {{ roleText }}
+                  </Badge>
+                </div>
+                <div class="profileSub" :title="accountText">
+                  {{ accountText }}
+                </div>
+              </div>
+            </div>
+
+            <!-- 快捷入口 -->
+            <div class="profileActions">
+              <button class="actionItem" type="button" @click="noop('profile')">
+                <span>个人资料</span>
+                <span class="chev">›</span>
+              </button>
+
+              <button class="actionItem" type="button" @click="noop('about')">
+                <span>关于</span>
+                <span class="chev">›</span>
+              </button>
+
+              <button class="actionItem" type="button" @click="noop('switch')">
+                <span>切换账号</span>
+                <span class="chev">›</span>
+              </button>
+
+              <button class="actionItem danger" type="button" @click="doLogout">
+                退出登录
+              </button>
+            </div>
+          </div>
+        </Transition>
+      </div>
     </div>
     <div class="navLine" aria-hidden="true"></div>
   </header>
@@ -302,9 +435,14 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { useToast } from "primevue/usetoast";
+import { useRouter } from "vue-router";
+import { toast } from "vue-sonner";
+import { useAuth } from "@/auth/useAuth";
+import { Badge } from "@/components/ui/badge";
+import { BadgeCheckIcon } from "lucide-vue-next";
 
-const toast = useToast();
+const router = useRouter();
+const { state, logout } = useAuth();
 
 // 你之前的占位点击函数（保留）
 function noop(key: string) {
@@ -397,12 +535,207 @@ function closeNotify() {
 }
 
 function viewMore() {
-  toast.add({
-    severity: "info",
-    summary: "提示",
-    detail: "功能暂不支持",
-    life: 1800,
+  toast.info("提示", { description: "功能暂不支持" });
+}
+
+// ✅ 任务数据结构（后端以后按这个吐给你即可）
+type Task = {
+  id: string;
+  title: string;
+  note?: string;
+  tag?: string; // 日记/厨房/阴阳师/三角洲… 后端传啥显示啥
+  time?: string; // 比如：今天 / 明天 / 2天后 / 10:30
+  done?: boolean;
+  priority?: Priority; // ✅ 新增
+};
+
+// ✅ mock：先给几条
+const tasks = ref<Task[]>([
+  {
+    id: "t1",
+    title: "把今天的日记补完",
+    note: "就一句也行",
+    tag: "日记",
+    time: "今天",
+    done: false,
+  },
+  {
+    id: "t2",
+    title: "牛奶处理掉",
+    note: "拿铁 / 麦片",
+    tag: "厨房",
+    time: "2 天内",
+    done: false,
+  },
+  {
+    id: "t3",
+    title: "阴阳师清体力",
+    note: "觉醒材料",
+    tag: "阴阳师",
+    time: "今晚",
+    done: true,
+  },
+  {
+    id: "t4",
+    title: "三角洲看看配置",
+    note: "开黑前检查",
+    tag: "三角洲",
+    time: "周末",
+    done: false,
+  },
+  {
+    id: "t5",
+    title: "复盘本周开销",
+    note: "外卖奶茶太多了",
+    tag: "财务",
+    time: "本周",
+    done: false,
+  },
+  {
+    id: "t6",
+    title: "给项目接口补 error code",
+    tag: "工作",
+    time: "下周",
+    done: false,
+  },
+]);
+
+// 面板只显示 5 条（你定的）
+const visibleTasks = computed(() => tasks.value.slice(0, 5));
+const pendingCount = computed(() => tasks.value.filter((t) => !t.done).length);
+
+// ✅ hover 展开/收起：微延迟更柔和
+const taskOpen = ref(false);
+let taskCloseTimer: number | null = null;
+
+function openTask() {
+  if (taskCloseTimer) {
+    window.clearTimeout(taskCloseTimer);
+    taskCloseTimer = null;
+  }
+  taskOpen.value = true;
+}
+
+function closeTask() {
+  if (taskCloseTimer) window.clearTimeout(taskCloseTimer);
+  taskCloseTimer = window.setTimeout(() => {
+    taskOpen.value = false;
+  }, 120);
+}
+
+// ✅ 快速新增：回车就加（简易）
+const quickText = ref("");
+function addQuick() {
+  const text = quickText.value.trim();
+  if (!text) return;
+
+  tasks.value.unshift({
+    id: "t_" + Date.now(),
+    title: text,
+    done: false,
+    // tag/time/note 为空 → 简易新增
   });
+
+  quickText.value = "";
+}
+
+// ✅ 勾选完成：轻薄动画靠 CSS 做
+function toggleDone(id: string) {
+  const t = tasks.value.find((x) => x.id === id);
+  if (!t) return;
+  t.done = !t.done;
+}
+
+// ✅ “查看更多” 暂不支持 → toast
+function viewTaskMore() {
+  toast.info("功能暂不支持");
+}
+
+// ✅ 详细弹窗（先留接口，你后面要 Dialog 我再给你补完整）
+function openTaskDialog() {
+  toast.info("详细弹窗下一步加");
+}
+function openTaskItem(t: any) {
+  toast.info("功能暂不支持");
+}
+
+/** 昵称优先：displayName / username；没有就用邮箱前缀/手机号后4位兜底 */
+const displayName = computed(() => {
+  const me: any = state.me || {};
+  return (
+    me.displayName ||
+    me.username ||
+    (me.email ? String(me.email).split("@")[0] : "") ||
+    (me.phone ? `用户${String(me.phone).slice(-4)}` : "") ||
+    "我的"
+  );
+});
+
+/** 第二行账号：邮箱优先，否则手机号，否则 id */
+const accountText = computed(() => {
+  const me: any = state.me || {};
+  return me.email || me.phone || me.id || "";
+});
+
+/** 角色 */
+const roleText = computed(() => {
+  const me: any = state.me || {};
+  return me.role || "USER";
+});
+const roleVariant = computed(() => {
+  const r = roleText.value;
+  if (r === "OWNER") return "secondary";
+  if (r === "ADMIN") return "default";
+  return "outline";
+});
+/** 头像字母：取昵称首字母（中文就直接取第一个字） */
+const avatarText = computed(() => {
+  const n = (displayName.value || "K").trim();
+  return n.slice(0, 1).toUpperCase();
+});
+
+/** hover 展开/收起（加一点延迟，手感更软） */
+const profileOpen = ref(false);
+let profileCloseTimer: number | null = null;
+
+function openProfile() {
+  if (profileCloseTimer) {
+    window.clearTimeout(profileCloseTimer);
+    profileCloseTimer = null;
+  }
+  profileOpen.value = true;
+}
+
+function closeProfile() {
+  if (profileCloseTimer) window.clearTimeout(profileCloseTimer);
+  profileCloseTimer = window.setTimeout(() => {
+    profileOpen.value = false;
+  }, 140);
+}
+
+function goProfile() {
+  // 先占位：后面你做页面了改成 router.push(...)
+  toast("功能暂未开放", { description: "个人资料页面后续上线" });
+  profileOpen.value = false;
+}
+
+function goAbout() {
+  toast("TriAura", { description: "© 2026 TriAura · 鲁ICP备2026006101号" });
+  profileOpen.value = false;
+}
+
+function switchAccount() {
+  toast("功能暂未开放", { description: "切换账号后续支持" });
+  profileOpen.value = false;
+}
+
+async function doLogout() {
+  try {
+    await logout();
+  } finally {
+    profileOpen.value = false;
+    router.replace("/auth?tab=login");
+  }
 }
 </script>
 
@@ -415,7 +748,7 @@ function viewMore() {
   transform: translateX(-50%);
   z-index: 1000;
 
-  width: min(1100px, calc(100% - 48px));
+  width: min(1320px, calc(100% - 48px));
   height: 54px;
   border-radius: 9px;
   overflow: visible;
@@ -744,7 +1077,7 @@ function viewMore() {
   /* 未读稍微更强调一点点即可 */
   text-shadow: 0 0 0 rgba(0, 0, 0, 0);
 }
-.notifyMeta{
+.notifyMeta {
   margin-top: 6px;
   display: flex;
   align-items: baseline;
@@ -766,7 +1099,7 @@ function viewMore() {
 
 .notifyContent {
   flex: 1;
-  min-width: 0;              /* 关键：允许 ellipsis 生效 */
+  min-width: 0; /* 关键：允许 ellipsis 生效 */
   font-size: 13px;
   line-height: 1.3;
   color: rgba(15, 23, 42, 0.74); /* 比标题淡一点，轻薄 */
@@ -837,5 +1170,485 @@ function viewMore() {
   color: #0b1220;
   border: 1px solid rgba(15, 23, 42, 0.1);
   background: rgba(255, 255, 255, 0.55);
+}
+/* ====== Tasks Popover ====== */
+.taskWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.dotBlue {
+  background: rgba(59, 130, 246, 0.95);
+}
+
+.taskPanel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 340px;
+  border-radius: 12px;
+  padding: 10px;
+  z-index: 3000;
+
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+
+.taskHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 6px 8px 6px;
+}
+.taskTitle {
+  font-size: 13px;
+  font-weight: 800;
+  color: #0b1220;
+}
+.taskCount {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* 快加 */
+.taskQuick {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 10px 4px;
+}
+.taskQuickInput {
+  flex: 1;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.45);
+  padding: 0 12px;
+  outline: none;
+  font-size: 12px;
+  color: #0b1220;
+}
+.taskQuickInput:focus {
+  border-color: rgba(15, 23, 42, 0.18);
+  background: rgba(255, 255, 255, 0.55);
+}
+.taskQuickPlus {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(255, 255, 255, 0.45);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+.taskQuickPlus:hover {
+  background: rgba(255, 255, 255, 0.62);
+  transform: translateY(-1px);
+}
+
+/* 列表 */
+.taskList {
+  display: grid;
+  gap: 6px;
+  padding: 2px;
+}
+
+.taskItem {
+  position: relative;
+  border-radius: 12px;
+  padding: 10px 10px;
+  background: rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+
+  display: grid;
+  grid-template-columns: 22px 1fr 72px; /* ✅ 右侧列固定，排版更稳 */
+  gap: 10px;
+  align-items: start;
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+.taskItem:hover {
+  background: rgba(255, 255, 255, 0.45);
+  transform: translateY(-1px);
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.taskLeft {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 2px;
+}
+.taskChk {
+  width: 16px;
+  height: 16px;
+}
+
+.taskMid {
+  min-width: 0;
+}
+.taskRight {
+  display: grid;
+  grid-template-rows: auto auto; /* 两行：上=tag，下=time */
+  row-gap: 6px;
+  justify-items: end; /* 右对齐 */
+  align-content: start; /* 从上开始排 */
+}
+.taskTopRow {
+  display: grid;
+  align-items: center;
+  justify-content: space-between;
+  grid-template-columns: 10px 1fr 15px; /* 左 dot 位 | 标题位 | 右占位 */
+  gap: 10px;
+}
+.taskItemTitle {
+  font-size: 13px;
+  font-weight: 750;
+  color: #0b1220;
+  line-height: 1.2;
+
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+
+  cursor: pointer;
+}
+.taskItemTitle.done {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+.taskTag {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(15, 23, 42, 0.45);
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.taskNote {
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.68);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.25;
+  margin-top: 12px; /* 让备注和标题的距离固定 */
+}
+
+.taskTime {
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  justify-self: end;
+  align-self: start; /* 或 baseline（看你浏览器效果） */
+  margin-top: 2px; /* 微调：让它更贴近备注行 */
+}
+
+/* 底部 */
+.taskFoot {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+  display: flex;
+  justify-content: center;
+}
+.taskMore {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  color: #0b1220;
+  padding: 8px 10px;
+  border-radius: 9px;
+  transition: background 0.15s ease;
+}
+.taskMore:hover {
+  background: rgba(15, 23, 42, 0.06);
+}
+/* 标题行：让点和标题稳稳对齐 */
+.todoTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* 小圆点本体 */
+.prioDot {
+  display: inline-block; /* ✅ 避免 inline baseline 捣乱 */
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex: 0 0 auto;
+  align-self: center; /* ✅ 双保险 */
+  margin: 0; /* ✅ 清掉可能的旧 margin-top */
+  opacity: 0.92;
+
+  /* 轻轻的光圈：更软 */
+  box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.04);
+}
+
+/* 颜色：不刺眼，偏“奶油感” */
+.prioDot[data-p="HIGH"] {
+  background: rgba(239, 68, 68, 0.85);
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
+.prioDot[data-p="MEDIUM"] {
+  background: rgba(245, 158, 11, 0.78);
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.1);
+}
+.prioDot[data-p="LOW"] {
+  background: rgba(100, 116, 139, 0.55);
+  box-shadow: 0 0 0 4px rgba(100, 116, 139, 0.08);
+}
+
+/* 标题不要被挤压 */
+.todoTitle {
+  font-weight: 800;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* ========== Profile Popover ========== */
+.profileWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+/* 面板：玻璃、半透明、吃背景 */
+.profilePanel {
+  position: absolute;
+  top: calc(100% + 10px);
+  /* ✅ 以头像按钮为中心点 */
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: 300px;
+  border-radius: 12px;
+  padding: 10px;
+  z-index: 3500;
+
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+
+  transform: translateX(-50%) translateY(2px);
+}
+
+/* 顶部 */
+.profileHead {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+  padding: 6px 6px 10px 6px;
+  align-items: center;
+}
+
+.profileAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-weight: 900;
+  color: #0b1220;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.profileInfo {
+  min-width: 0;
+}
+
+.profileTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profileName {
+  font-size: 13px;
+  font-weight: 900;
+  color: #0b1220;
+  line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profileRole {
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(15, 23, 42, 0.55);
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.profileSub {
+  margin-top: 4px;
+  font-size: 12px;
+  color: rgba(15, 23, 42, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 列表 */
+.profileList {
+  display: grid;
+  gap: 6px;
+  padding: 2px;
+}
+
+.profileItem {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.3);
+  color: #0b1220;
+
+  padding: 10px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+
+  font-size: 12px;
+  font-weight: 800;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.profileItem:hover {
+  background: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+}
+
+/* 底部 */
+.profileFoot {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.profileLogout {
+  width: 100%;
+  border: none;
+  background: rgba(15, 23, 42, 0.06);
+  color: #0b1220;
+
+  padding: 10px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+
+  font-size: 12px;
+  font-weight: 900;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+.profileLogout:hover {
+  background: rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+.roleBadge {
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.profileActions {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.actionItem {
+  height: 44px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.28);
+  backdrop-filter: blur(10px) saturate(140%);
+  -webkit-backdrop-filter: blur(10px) saturate(140%);
+
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  font-size: 13px;
+  font-weight: 800;
+  color: #0b1220;
+
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.actionItem:hover {
+  background: rgba(255, 255, 255, 0.46);
+  border-color: rgba(15, 23, 42, 0.1);
+  transform: translateY(-1px);
+}
+
+.chev {
+  font-size: 18px;
+  line-height: 1;
+  color: rgba(15, 23, 42, 0.35);
+}
+
+.actionItem.danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.18);
+  color: rgba(185, 28, 28, 1);
+  justify-content: center;
+}
+
+.actionItem.danger:hover {
+  background: rgba(239, 68, 68, 0.12);
+}
+@media (min-width: 1600px) {
+  .nav {
+    width: min(1500px, calc(100% - 64px));
+  }
 }
 </style>

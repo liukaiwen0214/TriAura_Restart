@@ -1,12 +1,11 @@
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { post } from "@/api/http";
-import { useToast } from "primevue/usetoast";
+import { toast } from "vue-sonner";
 
 export function useRegister() {
   const router = useRouter();
   const route = useRoute();
-  const toast = useToast();
 
   const target = ref("");
   const code = ref("");
@@ -19,13 +18,6 @@ export function useRegister() {
   const loading = ref(false);
   const cooldown = ref(0);
   let timer: number | null = null;
-
-  function showSuccess(summary: string, detail: string) {
-    toast.add({ severity: "success", summary, detail, life: 2000 });
-  }
-  function showError(summary: string, detail: string) {
-    toast.add({ severity: "error", summary, detail, life: 3000 });
-  }
 
   onBeforeUnmount(() => {
     if (timer) window.clearInterval(timer);
@@ -51,7 +43,7 @@ export function useRegister() {
   async function sendCode() {
     const t = target.value.trim();
     if (!t) {
-      showError("发送失败", "请输入手机号或邮箱");
+      toast.error("请输入手机号或邮箱");
       return;
     }
 
@@ -63,12 +55,12 @@ export function useRegister() {
         scene: "REGISTER",
         target: t,
       });
-      showSuccess("已发送", "验证码已发送，请查收");
+      toast.success("验证码已发送，请查收");
       startCooldown();
     } catch (err: any) {
       const payload = err?.response?.data || err?.data || null;
       const msg = payload?.message || err?.message || "发送失败";
-      showError("发送失败", msg);
+      toast.error(msg);
     }
   }
 
@@ -123,7 +115,7 @@ export function useRegister() {
     pwd2Touched.value = true;
 
     if (!canSubmit.value) {
-      showError("注册失败", "请检查信息：验证码/密码强度/两次密码一致");
+      toast.error("请检查信息：验证码/密码强度/两次密码一致");
       return;
     }
 
@@ -137,13 +129,13 @@ export function useRegister() {
         password: password.value,
       });
 
-      showSuccess("注册成功", "欢迎加入 TriAura");
+      toast.success("欢迎加入 TriAura");
       const redirect = (route.query.redirect as string) || "/";
       router.push(redirect);
     } catch (err: any) {
       const payload = err?.response?.data || err?.data || null;
       const msg = payload?.message || err?.message || "注册失败";
-      showError("注册失败", msg);
+      toast.error(msg);
     } finally {
       loading.value = false;
     }

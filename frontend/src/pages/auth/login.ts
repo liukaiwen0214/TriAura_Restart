@@ -2,12 +2,11 @@ import { ref, onBeforeUnmount } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuth } from "@/auth/useAuth";
 import { post } from "@/api/http";
-import { useToast } from "primevue/usetoast";
+import { toast } from 'vue-sonner'
+
 
 type Mode = "pwd" | "code";
-
 export function useLoginPage() {
-  const toast = useToast();
   const router = useRouter();
   const route = useRoute();
   const { loginByCode } = useAuth();
@@ -25,13 +24,6 @@ export function useLoginPage() {
 
   let timer: number | null = null;
 
-  function showSuccess(summary: string, detail: string) {
-    toast.add({ severity: "success", summary, detail, life: 2000 });
-  }
-
-  function showError(summary: string, detail: string) {
-    toast.add({ severity: "error", summary, detail, life: 3000 });
-  }
 
   function startCountdown(sec = 60) {
     leftSec.value = sec;
@@ -56,7 +48,7 @@ export function useLoginPage() {
 
   async function sendCode() {
     if (!account.value) {
-      showError("发送失败", "请先输入手机号或邮箱");
+      toast.error("请先输入手机号或邮箱");
       return;
     }
     if (sending.value || leftSec.value > 0) return;
@@ -70,12 +62,12 @@ export function useLoginPage() {
         target: account.value,
       });
 
-      showSuccess("已发送", "验证码已发送，请查收");
+      toast.success("验证码已发送，请查收");
       startCountdown(60);
     } catch (err: any) {
       const payload = err?.response?.data || err?.data || null;
       const msg = payload?.message || err?.message || "发送失败";
-      showError("发送失败", msg);
+      toast.error("发送失败", { description: msg });
     } finally {
       sending.value = false;
     }
@@ -85,13 +77,13 @@ export function useLoginPage() {
     loading.value = true;
     try {
       if (!account.value) {
-        showError("登录失败", "请输入手机号或邮箱");
+        toast.error("请输入手机号或邮箱");
         return;
       }
 
       if (mode.value === "pwd") {
         if (!password.value) {
-          showError("登录失败", "请输入密码");
+          toast.error("请输入密码");
           return;
         }
 
@@ -100,10 +92,10 @@ export function useLoginPage() {
           password: password.value,
         });
 
-        showSuccess("登录成功", "欢迎回来");
+        toast.success("登录成功");
       } else {
         if (!code.value.trim()) {
-          showError("登录失败", "请输入验证码");
+          toast.error("登录请输入验证码失败");
           return;
         }
 
@@ -113,7 +105,7 @@ export function useLoginPage() {
           code.value.trim(),
         );
 
-        showSuccess("登录成功", "验证码登录成功");
+        toast.success("登录成功");
       }
 
       const redirect = (route.query.redirect as string) || "/";
@@ -121,7 +113,7 @@ export function useLoginPage() {
     } catch (err: any) {
       const payload = err?.response?.data || err?.data || null;
       const msg = payload?.message || err?.message || "登录失败";
-      showError("登录失败", msg);
+      toast.error(msg);
     } finally {
       loading.value = false;
     }
