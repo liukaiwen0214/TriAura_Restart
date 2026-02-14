@@ -1,0 +1,32 @@
+HELP.md
+
+# Maven / Java build
+target/
+**/target/
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# VS Code
+.vscode/
+
+# NetBeans / STS（可留可删，看你用不用）
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+# 本地环境配置（包含密码，不提交）
+backend/src/main/resources/application-local.yml
